@@ -15,3 +15,5 @@ public class GameSnapshot {
 
     // TODO: constructor, toJSON(), fromJSON()
 }
+
+//prueba commit
