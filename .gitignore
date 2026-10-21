@@ -1,0 +1,14 @@
+# Maven
+target/
+
+# Java
+*.class
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Otros
+teoria
