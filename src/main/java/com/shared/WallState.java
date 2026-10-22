@@ -10,6 +10,13 @@ public class WallState {
     public String color;
 
     /**
+     * Constructor vacío.
+     */
+    public WallState() {
+        this(0, 0, 0, 0, DEFAULT_COLOR);
+    }
+
+    /**
      * Constructor a partir de parametros.
      *
      * @param x      esquina superior izquierda
@@ -26,21 +33,6 @@ public class WallState {
         this.color = (color == null || color.isBlank()) ? DEFAULT_COLOR : color;
     }
 
-    /**
-     * Constructor a partir de JSON.
-     *
-     * @param obj JSON a convertir
-     */
-    public WallState(JSONObject obj) {
-        this(
-            obj.optDouble("x", 0),
-            obj.optDouble("y", 0),
-            obj.optDouble("width", 0),
-            obj.optDouble("height", 0),
-            obj.optString("color", DEFAULT_COLOR)
-        );
-    }
-
     @Override
     public String toString() {
         return this.toJSON().toString();
@@ -55,6 +47,17 @@ public class WallState {
         obj.put("height", height);
         obj.put("color", color);
         return obj;
+    }
+
+    /** Crea una WallState a partir de JSON. */
+    public static WallState fromJSON(JSONObject obj) {
+        WallState wall = new WallState();
+        wall.x = obj.optDouble("x", 0);
+        wall.y = obj.optDouble("y", 0);
+        wall.width = obj.optDouble("width", 0);
+        wall.height = obj.optDouble("height", 0);
+        wall.color = obj.optString("color", DEFAULT_COLOR);
+        return wall;
     }
 
 }

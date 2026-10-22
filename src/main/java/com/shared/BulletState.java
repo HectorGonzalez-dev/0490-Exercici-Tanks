@@ -7,6 +7,11 @@ public class BulletState {
     public double x, y;
     public double angle;
 
+    /** Constructor vacío. */
+    public BulletState() {
+        this(0, 0, 0);
+    }
+
     /**
      * Constructor a partir de parametros.
      *
@@ -18,19 +23,6 @@ public class BulletState {
         this.x = x;
         this.y = y;
         this.angle = angle;
-    }
-
-    /**
-     * Constructor a partir de JSON.
-     *
-     * @param obj JSON a convertir
-     */
-    public BulletState(JSONObject obj) {
-        this(
-            obj.optDouble("x", 0),
-            obj.optDouble("y", 0),
-            obj.optDouble("angle", 0)
-        );
     }
 
     @Override
@@ -46,4 +38,14 @@ public class BulletState {
         obj.put("angle", angle);
         return obj;
     }
+
+    /** Crea una BulletState a partir de JSON. */
+    public static BulletState fromJSON(JSONObject obj) {
+        BulletState bullet = new BulletState();
+        bullet.x = obj.optDouble("x", 0);
+        bullet.y = obj.optDouble("y", 0);
+        bullet.angle = obj.optDouble("angle", 0);
+        return bullet;
+    }
+    
 }

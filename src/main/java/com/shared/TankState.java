@@ -19,6 +19,11 @@ public class TankState {
     public int lives;
     public boolean alive;
 
+    /** Constructor vacío. */
+    public TankState() {
+        this(NO_ID, "", "DODGERBLUE", 0, 0, 0, 0, GameConfig.INITIAL_LIVES, true);
+    }
+
     /**
      * Constructor a partir de parametros.
      *
@@ -46,25 +51,6 @@ public class TankState {
         this.alive = alive;
     }
 
-    /**
-     * Constructor a partir de JSON.
-     *
-     * @param obj JSON a convertir
-     */
-    public TankState(JSONObject obj) {
-        this(
-            obj.optInt("id", NO_ID),
-            obj.optString("name", ""),
-            obj.optString("color", "DODGERBLUE"),
-            obj.optDouble("x", 0),
-            obj.optDouble("y", 0),
-            obj.optDouble("angle", 0),
-            obj.optDouble("turretAngle", 0),
-            obj.optInt("lives", GameConfig.INITIAL_LIVES),
-            obj.optBoolean("alive", true)
-        );
-    }
-
     @Override
     public String toString() {
         return this.toJSON().toString();
@@ -85,5 +71,19 @@ public class TankState {
         return obj;
     }
 
-    // TODO: constructor, toJSON(), fromJSON()
+    /** Crea una TankState a partir de JSON. */
+    public static TankState fromJSON(JSONObject obj) {
+        TankState tank = new TankState();
+        tank.id = obj.optInt("id", NO_ID);
+        tank.name = obj.optString("name", "");
+        tank.color = obj.optString("color", "DODGERBLUE");
+        tank.x = obj.optDouble("x", 0);
+        tank.y = obj.optDouble("y", 0);
+        tank.angle = obj.optDouble("angle", 0);
+        tank.turretAngle = obj.optDouble("turretAngle", 0);
+        tank.lives = obj.optInt("lives", GameConfig.INITIAL_LIVES);
+        tank.alive = obj.optBoolean("alive", true);
+        return tank;
+    }
+
 }
