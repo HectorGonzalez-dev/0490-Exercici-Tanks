@@ -37,67 +37,6 @@ public class GameSnapshot {
         this.youIndex = -1;
     }
 
-    /**
-     * Constructor a partir de JSON.
-     *
-     * @param obj JSON a convertir
-     */
-    public GameSnapshot(JSONObject obj) {
-        this.scenario = obj.optInt("scenario", 1);
-        this.maxBullets = obj.optInt("maxBullets", GameConfig.MAX_BULLETS);
-        this.youIndex = obj.optInt("youIndex", -1);
-
-        // Tanques
-        this.tanks = new ArrayList<>();
-        JSONArray arrTanks = obj.optJSONArray("tanks");
-        if (arrTanks != null) {
-            for (int i = 0; i < arrTanks.length(); i++) {
-                JSONObject o = arrTanks.optJSONObject(i);
-                if (o != null) this.tanks.add(new TankState(o));
-            }
-        }
-
-        // Balas
-        this.bullets = new ArrayList<>();
-        JSONArray arrBullets = obj.optJSONArray("bullets");
-        if (arrBullets != null) {
-            for (int i = 0; i < arrBullets.length(); i++) {
-                JSONObject o = arrBullets.optJSONObject(i);
-                if (o != null) this.bullets.add(new BulletState(o));
-            }
-        }
-
-        // Explosiones
-        this.explosions = new ArrayList<>();
-        JSONArray arrExplosions = obj.optJSONArray("explosions");
-        if (arrExplosions != null) {
-            for (int i = 0; i < arrExplosions.length(); i++) {
-                JSONObject o = arrExplosions.optJSONObject(i);
-                if (o != null) this.explosions.add(new ExplosionState(o));
-            }
-        }
-
-        // Paredes
-        this.walls = new ArrayList<>();
-        JSONArray arrWalls = obj.optJSONArray("walls");
-        if (arrWalls != null) {
-            for (int i = 0; i < arrWalls.length(); i++) {
-                JSONObject o = arrWalls.optJSONObject(i);
-                if (o != null) this.walls.add(new WallState(o));
-            }
-        }
-
-        // Balas activas por tanque
-        JSONArray arrActive = obj.optJSONArray("activeBullets");
-        this.activeBullets = new int[arrActive != null ? arrActive.length() : 0];
-
-        if (arrActive != null) {
-            for (int i = 0; i < arrActive.length(); i++) {
-                this.activeBullets[i] = arrActive.optInt(i, 0);
-            }
-        }
-    }
-
     @Override
     public String toString() {
         return this.toJSON().toString();
@@ -152,6 +91,76 @@ public class GameSnapshot {
         JSONObject obj = toJSON();
         obj.put("type", Protocol.GAME_STATE);
         return obj;
+    }
+
+    /**
+     * Crea un GameSnapshot a partir de JSON.
+     */
+    public static GameSnapshot fromJSON(JSONObject obj) {
+        GameSnapshot snapshot = new GameSnapshot();
+
+        snapshot.scenario = obj.optInt("scenario", 1);
+        snapshot.maxBullets = obj.optInt("maxBullets", GameConfig.MAX_BULLETS);
+        snapshot.youIndex = obj.optInt("youIndex", -1);
+
+        // Tanques
+        snapshot.tanks = new ArrayList<>();
+        JSONArray arrTanks = obj.optJSONArray("tanks");
+        if (arrTanks != null) {
+            for (int i = 0; i < arrTanks.length(); i++) {
+                JSONObject o = arrTanks.optJSONObject(i);
+                if (o != null) {
+                    snapshot.tanks.add(TankState.fromJSON(o));
+                }
+            }
+        }
+
+        // Balas
+        snapshot.bullets = new ArrayList<>();
+        JSONArray arrBullets = obj.optJSONArray("bullets");
+        if (arrBullets != null) {
+            for (int i = 0; i < arrBullets.length(); i++) {
+                JSONObject o = arrBullets.optJSONObject(i);
+                if (o != null) {
+                    snapshot.bullets.add(BulletState.fromJSON(o));
+                }
+            }
+        }
+
+        // Explosiones
+        snapshot.explosions = new ArrayList<>();
+        JSONArray arrExplosions = obj.optJSONArray("explosions");
+        if (arrExplosions != null) {
+            for (int i = 0; i < arrExplosions.length(); i++) {
+                JSONObject o = arrExplosions.optJSONObject(i);
+                if (o != null) {
+                    snapshot.explosions.add(ExplosionState.fromJSON(o));
+                }
+            }
+        }
+
+        // Paredes
+        snapshot.walls = new ArrayList<>();
+        JSONArray arrWalls = obj.optJSONArray("walls");
+        if (arrWalls != null) {
+            for (int i = 0; i < arrWalls.length(); i++) {
+                JSONObject o = arrWalls.optJSONObject(i);
+                if (o != null) {
+                    snapshot.walls.add(WallState.fromJSON(o));
+                }
+            }
+        }
+
+        // Balas activas por tanque
+        JSONArray arrActive = obj.optJSONArray("activeBullets");
+        if (arrActive != null) {
+            snapshot.activeBullets = new int[arrActive.length()];
+            for (int i = 0; i < arrActive.length(); i++) {
+                snapshot.activeBullets[i] = arrActive.optInt(i, 0);
+            }
+        }
+
+        return snapshot;
     }
 
     // ---- Ayudantes de lectura para el cliente ----

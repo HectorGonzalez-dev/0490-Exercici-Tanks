@@ -8,6 +8,11 @@ public class ExplosionState {
     public double radius;
     public double progress;
 
+    /** Constructor vacío. */
+    public ExplosionState() {
+        this(0, 0, 0, 0);
+    }
+
     /**
      * Constructor a partir de parametros.
      *
@@ -23,20 +28,6 @@ public class ExplosionState {
         this.progress = progress;
     }
 
-    /**
-     * Constructor a partir de JSON.
-     *
-     * @param obj JSON a convertir
-     */
-    public ExplosionState(JSONObject obj) {
-        this(
-            obj.optDouble("x", 0),
-            obj.optDouble("y", 0),
-            obj.optDouble("radius", 0),
-            obj.optDouble("progress", 0)
-        );
-    }
-
     @Override
     public String toString() {
         return this.toJSON().toString();
@@ -50,6 +41,16 @@ public class ExplosionState {
         obj.put("radius", radius);
         obj.put("progress", progress);
         return obj;
+    }
+
+    /** Crea una ExplosionState a partir de JSON. */
+    public static ExplosionState fromJSON(JSONObject obj) {
+        ExplosionState explosion = new ExplosionState();
+        explosion.x = obj.optDouble("x", 0);
+        explosion.y = obj.optDouble("y", 0);
+        explosion.radius = obj.optDouble("radius", 0);
+        explosion.progress = obj.optDouble("progress", 0);
+        return explosion;
     }
 
 }
