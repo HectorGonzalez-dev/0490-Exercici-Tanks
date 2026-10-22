@@ -29,7 +29,7 @@ public class WallState {
     /**
      * Constructor a partir de JSON.
      *
-     * @param obj JSONObject de un WallState
+     * @param obj JSON a convertir
      */
     public WallState(JSONObject obj) {
         this(
