@@ -7,5 +7,43 @@ public class BulletState {
     public double x, y;
     public double angle;
 
-    // TODO: constructor, toJSON(), fromJSON()
+    /**
+     * Constructor a partir de parametros.
+     *
+     * @param x     centro X
+     * @param y     centro Y
+     * @param angle dirección en grados
+     */
+    public BulletState(double x, double y, double angle) {
+        this.x = x;
+        this.y = y;
+        this.angle = angle;
+    }
+
+    /**
+     * Constructor a partir de JSON.
+     *
+     * @param obj JSON a convertir
+     */
+    public BulletState(JSONObject obj) {
+        this(
+            obj.optDouble("x", 0),
+            obj.optDouble("y", 0),
+            obj.optDouble("angle", 0)
+        );
+    }
+
+    @Override
+    public String toString() {
+        return this.toJSON().toString();
+    }
+
+    /** Convierte el estado de la bala a JSON. */
+    public JSONObject toJSON() {
+        JSONObject obj = new JSONObject();
+        obj.put("x", x);
+        obj.put("y", y);
+        obj.put("angle", angle);
+        return obj;
+    }
 }
