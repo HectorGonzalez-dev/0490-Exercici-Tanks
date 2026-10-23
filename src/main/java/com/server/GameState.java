@@ -38,6 +38,9 @@ public class GameState {
 
     public void startGame(int scenario) {
         // 1. Cargar paredes del escenario
+        walls.clear();
+        walls.addAll(Scenarios.getScenario(scenario));
+
         this.scenario = scenario;
         this.gameRunning = true;
 
