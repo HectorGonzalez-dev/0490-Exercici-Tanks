@@ -35,6 +35,7 @@ public class Main extends Application {
 
         // 1. Registrar les 4 vistes (la primera és la que es mostra al iniciar)
         UtilsViews.parentContainer.setStyle("-fx-font: 14 arial;");
+        
         UtilsViews.addView(getClass(), "ViewConfig", "/assets/viewConfig.fxml");
         UtilsViews.addView(getClass(), "ViewWait", "/assets/viewWait.fxml");
         UtilsViews.addView(getClass(), "ViewPlay", "/assets/viewPlay.fxml");
