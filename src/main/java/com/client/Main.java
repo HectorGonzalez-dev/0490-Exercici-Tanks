@@ -115,6 +115,9 @@ public class Main extends Application {
                 // Guardar el nostre nom assignat pel servidor
                 clientName = msgObj.optString("clientName", "");
 
+                // Tornar a mostrar el títol d'espera (pot haver quedat "GO!" del compte enrere anterior)
+                ctrlWait.txtTitle.setText("Esperant jugadors ...");
+
                 // Mostrar els noms dels jugadors a la vista d'espera
                 String player0 = msgObj.optString("player0", "?");
                 String player1 = msgObj.optString("player1", "?");

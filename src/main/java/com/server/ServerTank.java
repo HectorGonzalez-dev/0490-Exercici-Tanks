@@ -34,9 +34,23 @@ public class ServerTank {
         this.speed = 0;
     }
 
-    public void destroy() {
+    /**
+     * El tanque recibe un impacto: pierde una vida y deja de estar vivo.
+     *
+     * @return true si se quedó sin vidas (el rival gana la partida),
+     *         false si aún le quedan vidas y reaparecerá en la próxima ronda.
+     */
+    public boolean loseLife() {
+        lives--;
+        if (lives <= 0) {
+            lives = 0;
+            alive = false;
+            speed = 0;
+            return true; // sin vidas: fin de partida para este jugador
+        }
         alive = false;
         speed = 0;
+        return false; // perderá una vida y reaparecerá al iniciar la siguiente ronda
     }
 
     /** Actualiza ángulo y velocidad a partir de una dirección de movimiento (dx, dy). */

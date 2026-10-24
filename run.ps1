@@ -1,30 +1,25 @@
-$ErrorActionPreference = "Stop"
+# run.ps1
+
+# Exemple de funcionament: .\run.ps1 com.project.Main
+# on 'Main' és la classe amb 'main' que volem executar
+
+# Set console output to UTF-8
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+# Change to the directory where the script is located
 Set-Location $PSScriptRoot
-$mainClass = if ($args.Count -gt 0) { $args[0] } else { "com.project.Main" }
 
-# Maven descarrega JavaFX i compila el projecte
-mvn compile
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+# Set MAVEN_OPTS environment variable
+$env:MAVEN_OPTS="--add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.nio=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED -Dfile.encoding=UTF8"
 
-# JavaFX 22 per a Windows utilitza l'arquitectura x64
-$javaSettings = cmd /c "java -XshowSettings:properties -version 2>&1"
-$javaArch = ($javaSettings | Select-String '^\s*os.arch = (.*)$').Matches.Groups[1].Value
-if ($javaArch -notin @("amd64", "x86_64")) {
-    Write-Error "Arquitectura Java no compatible: $javaArch"
-    exit 1
-}
+# Check for the first argument and set it as the main class
+$mainClass = $args[0]
 
-# Utilitza només els JAR de JavaFX 22 per a Windows
-$fxJars = foreach ($module in @("base", "controls", "fxml", "graphics")) {
-    $jar = "$env:USERPROFILE\.m2\repository\org\openjfx\javafx-$module\22\javafx-$module-22-win.jar"
-    if (-not (Test-Path $jar)) {
-        Write-Error "No es pot trobar JavaFX: $jar"
-        exit 1
-    }
-    $jar
-}
-$fxPath = $fxJars -join ";"
+Write-Host "Setting MAVEN_OPTS to: $env:MAVEN_OPTS"
+Write-Host "Main Class: $mainClass"
 
-java --module-path $fxPath --add-modules javafx.controls,javafx.fxml `
-    -cp target/classes $mainClass
-exit $LASTEXITCODE
+# Execute mvn command with the profile and main class as arguments
+$execArg = "-Dexec.mainClass=" + $mainClass
+Write-Host "Exec args: $execArg"
+
+mvn -q test-compile exec:java -PrunMain $execArg
