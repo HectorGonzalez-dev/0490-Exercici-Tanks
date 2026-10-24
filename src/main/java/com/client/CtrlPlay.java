@@ -317,11 +317,11 @@ public class CtrlPlay implements Initializable {
 
         if (tank0 != null) {
             int bullets0 = currentState.getActiveBullets(0);
-            lblPlayer1.setText(tank0.name + "  ❤:" + tank0.lives + "  💣:" + bullets0 + "/" + currentState.maxBullets);
+            lblPlayer1.setText(tank0.name + "  " + "❤".repeat(tank0.lives) + "  💣:" + bullets0 + "/" + currentState.maxBullets);
         }
         if (tank1 != null) {
             int bullets1 = currentState.getActiveBullets(1);
-            lblPlayer2.setText(tank1.name + "  ❤:" + tank1.lives + "  💣:" + bullets1 + "/" + currentState.maxBullets);
+            lblPlayer2.setText(tank1.name + "  " + "❤".repeat(tank1.lives) + "  💣:" + bullets1 + "/" + currentState.maxBullets);
         }
     }
 }
