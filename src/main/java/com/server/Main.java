@@ -1,6 +1,8 @@
 package com.server;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -13,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import com.shared.GameSnapshot;
@@ -41,6 +44,11 @@ public class Main extends WebSocketServer {
     private long lastRunNanos = 0;
     // tarea del bucle de partida (~60 fps); se cancela al reiniciar para no duplicarlo
     private ScheduledFuture<?> gameLoopTask = null;
+    // tareas de la cuenta atrás (números COUNTDOWN + arranque de partida); se
+    // cancelan si la partida se aborta (p. ej. un jugador se desconecta durante
+    // la cuenta atrás) para que no disparen una cuenta atrás muerta sobre los
+    // clientes que quedan, lo que les enviaría a una pantalla de juego sin estado
+    private final List<ScheduledFuture<?>> countdownTasks = Collections.synchronizedList(new ArrayList<>());
 
     public Main(InetSocketAddress address) {
         super(address);
@@ -88,6 +96,10 @@ public class Main extends WebSocketServer {
 
         if (gameRunning) {
             gameRunning = false;
+            // Si la desconexión ocurre durante la cuenta atrás, quedan mensajes
+            // COUNTDOWN y el arranque de partida programados: cancelar todo para
+            // que no disparen una partida muerta sobre los clientes que quedan.
+            cancelCountdownTasks();
             // El que se queda ve la pantalla de resultado: marcarlo en onResultScreen
             // para que su nombre solo sea visible cuando pulse "volver a jugar".
             onResultScreen.addAll(playerIndex.keySet());
@@ -152,8 +164,18 @@ public class Main extends WebSocketServer {
                 }
 
                 case Protocol.MOVE: {
-                    String direction = msg.optString("direction", "");
-                    game.handleMove(playerKey, direction);
+                    // El cliente envía la lista COMPLETA de direcciones activas en cada
+                    // pulsación/soltación de teclas: se reemplaza el estado del jugador
+                    // en lugar de acumular direcciones, para que al soltar una tecla la
+                    // dirección correspondiente desaparezca y el tanque responda bien.
+                    JSONArray dirs = msg.optJSONArray("directions");
+                    List<String> directions = new ArrayList<>();
+                    if (dirs != null) {
+                        for (int i = 0; i < dirs.length(); i++) {
+                            directions.add(dirs.optString(i));
+                        }
+                    }
+                    game.handleMove(playerKey, directions);
                     break;
                 }
 
@@ -266,17 +288,20 @@ public class Main extends WebSocketServer {
     private void startCountdown() {
         gameRunning = true; // bloquea para no arrancar dos cuentas atrás
         onResultScreen.clear(); // todos dejan la pantalla de resultado: empiezan a jugar
+        cancelCountdownTasks(); // descarta tareas de una cuenta atrás anterior abortada
         for (int i = 5; i >= 0; i--) {
             final int value = i;
-            scheduler.schedule(() -> {
+            countdownTasks.add(scheduler.schedule(() -> {
+                if (!gameRunning) return; // la cuenta atrás se abortó (jugador desconectado)
                 JSONObject msg = new JSONObject();
                 msg.put("type", Protocol.COUNTDOWN);
                 msg.put("value", value);
                 sendToAll(msg.toString());
-            }, 5 - i, TimeUnit.SECONDS);
+            }, 5 - i, TimeUnit.SECONDS));
         }
         // Al acabar la cuenta atrás, iniciar partida y bucle
-        scheduler.schedule(() -> {
+        countdownTasks.add(scheduler.schedule(() -> {
+            if (!gameRunning) return; // sin partida en curso: no iniciar sobre un estado muerto
             int scenario = 1 + (int)(Math.random() * 3);
             game.startGame(scenario);
             // startGame crea los tanques con nombres por defecto ("Jugador 1/2"):
@@ -289,7 +314,15 @@ public class Main extends WebSocketServer {
             }
             lastRunNanos = System.nanoTime();
             startGameLoop();
-        }, 6, TimeUnit.SECONDS);
+        }, 6, TimeUnit.SECONDS));
+    }
+
+    /** Cancela y limpia las tareas programadas de la cuenta atrás. */
+    private void cancelCountdownTasks() {
+        for (ScheduledFuture<?> t : countdownTasks) {
+            t.cancel(false);
+        }
+        countdownTasks.clear();
     }
 
     private void startGameLoop() {
