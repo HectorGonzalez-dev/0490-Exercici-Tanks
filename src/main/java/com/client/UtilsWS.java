@@ -149,7 +149,4 @@ public class UtilsWS {
         }
     }
 
-    public boolean isOpen() {
-        return client != null && client.isOpen();
-    }
 }
