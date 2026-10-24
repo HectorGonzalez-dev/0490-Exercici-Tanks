@@ -1,10 +1,13 @@
 package com.client;
 
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.ResourceBundle;
 import java.util.Set;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import com.shared.BulletState;
@@ -63,11 +66,11 @@ public class CtrlPlay implements Initializable {
             });
 
             // si el jugador cambia de ventana (alt+tab), limpiamos todas las teclas
-            // y enviamos STOP para que el tanque no se quede moviendose solo
+            // y enviamos la lista vacía para que el tanque no se quede moviendose solo
             canvas.getScene().getWindow().focusedProperty().addListener((obs, old, focused) -> {
                 if (!focused) {
                     pressedKeys.clear();
-                    sendMove("STOP");
+                    sendMove(List.of());
                 }
             });
         });
@@ -111,23 +114,22 @@ public class CtrlPlay implements Initializable {
         if (pressedKeys.contains(KeyCode.UP) || pressedKeys.contains(KeyCode.W)) dy -= 1;
         if (pressedKeys.contains(KeyCode.DOWN) || pressedKeys.contains(KeyCode.S)) dy += 1;
 
-        // si no hay teclas pulsadas, paramos el tanque
-        if (dx == 0 && dy == 0) {
-            sendMove("STOP");
-        } else {
-            // enviamos cada direccion activa por separado
-            if (dy < 0) sendMove("FORWARD");
-            if (dy > 0) sendMove("BACKWARD");
-            if (dx < 0) sendMove("LEFT");
-            if (dx > 0) sendMove("RIGHT");
-        }
+        // enviamos TODAS las direcciones activas en un solo mensaje, asi el
+        // servidor reemplaza su estado de teclas por el nuestro y no se queda
+        // con direcciones "pegadas" cuando se pulsan o sueltan varias teclas
+        List<String> dirs = new ArrayList<>();
+        if (dy < 0) dirs.add("FORWARD");
+        if (dy > 0) dirs.add("BACKWARD");
+        if (dx < 0) dirs.add("LEFT");
+        if (dx > 0) dirs.add("RIGHT");
+        sendMove(dirs);
     }
 
-    // envia un mensaje json al servidor con la direccion de movimiento
-    private void sendMove(String direction) {
+    // envia un mensaje json al servidor con la lista de direcciones activas
+    private void sendMove(List<String> directions) {
         JSONObject msg = new JSONObject();
         msg.put("type", Protocol.MOVE);
-        msg.put("direction", direction);
+        msg.put("directions", new JSONArray(directions));
         if (Main.wsClient != null) Main.wsClient.safeSend(msg.toString());
     }
 

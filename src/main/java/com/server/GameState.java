@@ -76,19 +76,17 @@ public class GameState {
         lastRunNanos = System.nanoTime();
     }
 
-    public void handleMove(String player, String direction) {
+    /**
+     * Reemplaza las direcciones de movimiento activas de un jugador.
+     * El cliente envía en cada mensaje la lista COMPLETA de direcciones que
+     * tiene pulsadas en ese momento (lista vacía = parado), de modo que el
+     * estado del servidor nunca se desincroniza del teclado del cliente.
+     */
+    public void handleMove(String player, List<String> directions) {
         if (!gameRunning || !tanks.containsKey(player)) return;
 
-        Set<String> keys = pressedKeys.computeIfAbsent(player, k -> new HashSet<>());
-
-        switch (direction) {
-            case "FORWARD": keys.add("FORWARD"); break;
-            case "BACKWARD": keys.add("BACKWARD"); break;
-            case "LEFT": keys.add("LEFT"); break;
-            case "RIGHT": keys.add("RIGHT"); break;
-            case "STOP": keys.clear(); break;
-            default: // ignorar direcciones desconocidas
-        }
+        // Copia defensiva: update() se ejecuta en otro hilo y solo lee el conjunto
+        pressedKeys.put(player, new HashSet<>(directions));
     }
 
     public void handleAim(String player, double x, double y) {
