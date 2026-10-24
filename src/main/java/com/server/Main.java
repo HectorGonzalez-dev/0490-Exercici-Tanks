@@ -256,10 +256,9 @@ public class Main extends WebSocketServer {
         }
     }
 
-    /** Sobreescribe el nombre de un tanque en GameState (sin editar GameState: usamos reflexión vía campos públicos). */
+    /** Sobreescribe el nombre de un tanque en GameState con el nombre elegido por el cliente. */
     private void updateTankName(String playerKey, String name) {
-        // GameState no expide setter de nombres; mantenemos playerNames como fuente de verdad
-        // y usamos esos nombres en waiting/gameOver. Este método queda como punto de extensión.
+        game.setTankName(playerKey, name);
     }
 
     private void startCountdown() {
@@ -278,6 +277,14 @@ public class Main extends WebSocketServer {
         scheduler.schedule(() -> {
             int scenario = 1 + (int)(Math.random() * 3);
             game.startGame(scenario);
+            // startGame crea los tanques con nombres por defecto ("Jugador 1/2"):
+            // sustituirlos por los nombres reales que cada cliente eligió con setName.
+            for (Map.Entry<WebSocket, Integer> e : playerIndex.entrySet()) {
+                String name = playerNames.get(e.getKey());
+                if (name != null) {
+                    game.setTankName(e.getValue() == 0 ? "player0" : "player1", name);
+                }
+            }
             lastRunNanos = System.nanoTime();
             startGameLoop();
         }, 6, TimeUnit.SECONDS);

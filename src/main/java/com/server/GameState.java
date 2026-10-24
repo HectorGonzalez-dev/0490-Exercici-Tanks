@@ -203,6 +203,14 @@ public class GameState {
         return count;
     }
 
+    /** Cambia el nombre mostrado del tanque del jugador indicado ("player0"/"player1"). */
+    public void setTankName(String playerKey, String name) {
+        ServerTank tank = tanks.get(playerKey);
+        if (tank != null && name != null && !name.isBlank()) {
+            tank.name = name;
+        }
+    }
+
     private TankState toTankState(ServerTank tank) {
         return new TankState(
             Integer.parseInt(tank.id),
@@ -248,14 +256,18 @@ public class GameState {
         ServerTank t1 = tanks.get("player1");
         int lives0 = (t0 != null) ? t0.lives : GameConfig.INITIAL_LIVES;
         int lives1 = (t1 != null) ? t1.lives : GameConfig.INITIAL_LIVES;
+        // Conservar los nombres elegidos por cada jugador (si no, la pantalla de
+        // juego volvería a mostrar los nombres por defecto tras cada ronda).
+        String name0 = (t0 != null) ? t0.name : "Jugador 1";
+        String name1 = (t1 != null) ? t1.name : "Jugador 2";
 
         tanks.clear();
         tanks.put("player0", new ServerTank(
-            "0", "Jugador 1", "DODGERBLUE",
+            "0", name0, "DODGERBLUE",
             90, 250, 0, 0,
             lives0, true));
         tanks.put("player1", new ServerTank(
-            "1", "Jugador 2", "DARKGOLDENROD",
+            "1", name1, "DARKGOLDENROD",
             710, 250, 180, 180,
             lives1, true));
 
