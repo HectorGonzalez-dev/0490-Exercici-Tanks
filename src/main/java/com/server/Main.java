@@ -3,9 +3,11 @@ package com.server;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.java_websocket.WebSocket;
@@ -30,8 +32,13 @@ public class Main extends WebSocketServer {
     private final Map<WebSocket, Integer> playerIndex = new ConcurrentHashMap<>();
     private int nextPlayerIndex = 0;
 
+    // sockets que han pulsado "volver a jugar" y están esperando una nueva partida
+    private final Set<WebSocket> waitingForRestart = ConcurrentHashMap.newKeySet();
+
     private boolean gameRunning = false;
     private long lastRunNanos = 0;
+    // tarea del bucle de partida (~60 fps); se cancela al reiniciar para no duplicarlo
+    private ScheduledFuture<?> gameLoopTask = null;
 
     public Main(InetSocketAddress address) {
         super(address);
@@ -59,6 +66,7 @@ public class Main extends WebSocketServer {
     public void onClose(WebSocket conn, int code, String reason, boolean remote) {
         playerNames.remove(conn);
         playerIndex.remove(conn);
+        waitingForRestart.remove(conn);
         clients.remove(conn);
         System.out.println("Cliente desconectado: " + conn.getRemoteSocketAddress());
 
@@ -122,7 +130,16 @@ public class Main extends WebSocketServer {
                 }
 
                 case Protocol.PLAY_AGAIN: {
-                    restartGame();
+                    // Este jugador vuelve a la sala de espera
+                    waitingForRestart.add(conn);
+
+                    if (waitingForRestart.size() >= 2) {
+                        // Los dos jugadores han vuelto: nueva cuenta atrás
+                        restartGame();
+                    } else {
+                        // Solo uno espera: avisarle de que aún falta el rival
+                        sendWaiting(conn);
+                    }
                     break;
                 }
 
@@ -155,6 +172,11 @@ public class Main extends WebSocketServer {
     private String nameByIndex(int index) {
         for (Map.Entry<WebSocket, Integer> e : playerIndex.entrySet()) {
             if (e.getValue() == index) {
+                // Tras acabar la partida, un jugador solo es visible en la sala de
+                // espera si también ha pulsado "volver a jugar"; si no, muestra "?".
+                if (!waitingForRestart.isEmpty() && !waitingForRestart.contains(e.getKey())) {
+                    return "?";
+                }
                 return playerNames.getOrDefault(e.getKey(), "?");
             }
         }
@@ -219,8 +241,11 @@ public class Main extends WebSocketServer {
     }
 
     private void startGameLoop() {
+        if (gameLoopTask != null) {
+            gameLoopTask.cancel(false); // evita dos bucles enviando estados a la vez
+        }
         long periodMs = 1000 / 60; // ~60 fps
-        scheduler.scheduleAtFixedRate(() -> {
+        gameLoopTask = scheduler.scheduleAtFixedRate(() -> {
             if (!gameRunning) return;
 
             long now = System.nanoTime();
@@ -255,11 +280,13 @@ public class Main extends WebSocketServer {
 
     private void restartGame() {
         gameRunning = false;
+        waitingForRestart.clear();
         // Nuevo estado de partida (limpia tanques, balas, explosiones, teclas)
         game = new GameState();
         lastRunNanos = System.nanoTime();
-        // Avisar a ambos clientes que vuelven a la espera
+        // Avisar a ambos clientes que vuelven a la espera y reiniciar la cuenta atrás
         broadcastWaiting();
+        startCountdown();
         System.out.println("Partida reiniciada (playAgain)");
     }
 }
