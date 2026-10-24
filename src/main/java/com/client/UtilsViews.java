@@ -61,25 +61,6 @@ public class UtilsViews {
         return null;
     }
 
-    // Set visible view by its id (viewId)
-    public static void setView(String viewId) {
-
-        ArrayList<Node> list = new ArrayList<>();
-        list.addAll(parentContainer.getChildrenUnmodifiable());
-
-        for (Node n : list) {
-            if (n.getId().equals(viewId)) {
-                n.setVisible(true);
-                n.setManaged(true);
-            } else {
-                n.setVisible(false);
-                n.setManaged(false);
-            }
-        }
-
-        parentContainer.requestFocus();
-    }
-
     // Set visible view by its id (viewId) with an animation
     public static void setViewAnimating(String viewId) {
 

@@ -34,8 +34,6 @@ public class GameState {
     private final List<ServerExplosion> explosions = new ArrayList<>();
     private final List<WallState> walls = new ArrayList<>();
 
-    private long lastRunNanos = 0;
-
     // Entre rondas: un tanque murió pero su jugador aún le quedan vidas.
     // Se espera este retraso antes de reappear ambos tanques.
     private static final double ROUND_RESET_DELAY_SECONDS = 2.0;
@@ -72,8 +70,6 @@ public class GameState {
         pressedKeys.put("player1", new HashSet<>());
         mousePositions.put("player0", new double[]{710, 250});
         mousePositions.put("player1", new double[]{90, 250});
-
-        lastRunNanos = System.nanoTime();
     }
 
     /**
@@ -277,8 +273,6 @@ public class GameState {
         pressedKeys.put("player1", new HashSet<>());
         mousePositions.put("player0", new double[]{710, 250});
         mousePositions.put("player1", new double[]{90, 250});
-
-        lastRunNanos = System.nanoTime();
     }
 
     private void updateTanks(double dt) {

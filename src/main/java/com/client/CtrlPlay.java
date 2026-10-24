@@ -12,7 +12,6 @@ import org.json.JSONObject;
 
 import com.shared.BulletState;
 import com.shared.ExplosionState;
-import com.shared.GameConfig;
 import com.shared.GameSnapshot;
 import com.shared.Protocol;
 import com.shared.TankState;
