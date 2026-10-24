@@ -18,6 +18,7 @@ import org.java_websocket.server.WebSocketServer;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import com.shared.GameConfig;
 import com.shared.GameSnapshot;
 import com.shared.Protocol;
 
@@ -302,7 +303,7 @@ public class Main extends WebSocketServer {
         // Al acabar la cuenta atrás, iniciar partida y bucle
         countdownTasks.add(scheduler.schedule(() -> {
             if (!gameRunning) return; // sin partida en curso: no iniciar sobre un estado muerto
-            int scenario = 1 + (int)(Math.random() * 3);
+            int scenario = 1 + (int)(Math.random() * GameConfig.NUM_SCENARIOS);
             game.startGame(scenario);
             // startGame crea los tanques con nombres por defecto ("Jugador 1/2"):
             // sustituirlos por los nombres reales que cada cliente eligió con setName.

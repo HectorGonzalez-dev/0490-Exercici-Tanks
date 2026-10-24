@@ -19,9 +19,6 @@ public final class Scenarios {
 
     private Scenarios() { }
 
-    /** Número total de escenarios disponibles. */
-    public static final int NUM_SCENARIOS = GameConfig.NUM_SCENARIOS;
-
     /** Color de las paredes exteriores. */
     private static final String WALL_COLOR = "DIMGRAY";
 
