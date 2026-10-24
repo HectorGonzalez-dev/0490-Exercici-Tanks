@@ -15,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import com.shared.GameSnapshot;
@@ -163,8 +164,18 @@ public class Main extends WebSocketServer {
                 }
 
                 case Protocol.MOVE: {
-                    String direction = msg.optString("direction", "");
-                    game.handleMove(playerKey, direction);
+                    // El cliente envía la lista COMPLETA de direcciones activas en cada
+                    // pulsación/soltación de teclas: se reemplaza el estado del jugador
+                    // en lugar de acumular direcciones, para que al soltar una tecla la
+                    // dirección correspondiente desaparezca y el tanque responda bien.
+                    JSONArray dirs = msg.optJSONArray("directions");
+                    List<String> directions = new ArrayList<>();
+                    if (dirs != null) {
+                        for (int i = 0; i < dirs.length(); i++) {
+                            directions.add(dirs.optString(i));
+                        }
+                    }
+                    game.handleMove(playerKey, directions);
                     break;
                 }
 
