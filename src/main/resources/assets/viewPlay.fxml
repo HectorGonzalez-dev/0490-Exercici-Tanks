@@ -12,10 +12,10 @@
       <VBox AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
          <children>
             <!-- HUD superior -->
-            <HBox alignment="CENTER" style="-fx-padding: 4;">
+            <HBox alignment="CENTER" style="-fx-padding: 8 16 8 16;">
                <children>
-                  <Label fx:id="lblPlayer1" text="Jugador 1" style="-fx-font-size: 14;" HBox.hgrow="ALWAYS" />
-                  <Label fx:id="lblPlayer2" text="Jugador 2" style="-fx-font-size: 14;" HBox.hgrow="ALWAYS" />
+                  <Label fx:id="lblPlayer1" text="Jugador 1" style="-fx-font-size: 14;" HBox.hgrow="ALWAYS" maxWidth="Infinity" alignment="CENTER_LEFT" />
+                  <Label fx:id="lblPlayer2" text="Jugador 2" style="-fx-font-size: 14;" HBox.hgrow="ALWAYS" maxWidth="Infinity" alignment="CENTER_RIGHT" />
                </children>
             </HBox>
             <!-- Canvas del joc -->
