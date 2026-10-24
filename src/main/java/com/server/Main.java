@@ -32,8 +32,10 @@ public class Main extends WebSocketServer {
     private final Map<WebSocket, Integer> playerIndex = new ConcurrentHashMap<>();
     private int nextPlayerIndex = 0;
 
-    // sockets que han pulsado "volver a jugar" y están esperando una nueva partida
-    private final Set<WebSocket> waitingForRestart = ConcurrentHashMap.newKeySet();
+    // sockets que aún están en la pantalla de resultado (han jugado la partida
+    // terminada y aún no han pulsado "volver a jugar"). Los que se conectan después
+    // de terminar la partida NO están aquí: están en la sala de espera visible.
+    private final Set<WebSocket> onResultScreen = ConcurrentHashMap.newKeySet();
 
     private boolean gameRunning = false;
     private long lastRunNanos = 0;
@@ -51,9 +53,21 @@ public class Main extends WebSocketServer {
     public void onOpen(WebSocket conn, ClientHandshake handshake) {
         clients.add(conn); // registra la conexión (el nombre de pool se ignora)
 
-        // Asignar índice de jugador (0 = primer cliente, 1 = segundo)
-        int idx = nextPlayerIndex;
-        nextPlayerIndex++;
+        // Reutilizar el índice libre (0 o 1): si un jugador se desconectó, su puesto
+        // queda libre para el siguiente cliente. Si no, se asigna el primero vacío.
+        Integer idx = null;
+        for (int i = 0; i < 2; i++) {
+            final int candidate = i;
+            boolean taken = playerIndex.containsValue(candidate);
+            if (!taken) {
+                idx = candidate;
+                break;
+            }
+        }
+        if (idx == null) {
+            idx = nextPlayerIndex; // ya hay 2 jugadores: no debería ocurrir
+            nextPlayerIndex++;
+        }
         playerIndex.put(conn, idx);
 
         // Enviar estado de espera a este cliente
@@ -68,12 +82,16 @@ public class Main extends WebSocketServer {
         String loserName = playerNames.getOrDefault(conn, "Jugador");
         Integer loserIdx = playerIndex.remove(conn);
         playerNames.remove(conn);
-        waitingForRestart.remove(conn);
+        onResultScreen.remove(conn);
         clients.remove(conn);
         System.out.println("Cliente desconectado: " + conn.getRemoteSocketAddress());
 
         if (gameRunning) {
             gameRunning = false;
+            // El que se queda ve la pantalla de resultado: marcarlo en onResultScreen
+            // para que su nombre solo sea visible cuando pulse "volver a jugar".
+            onResultScreen.addAll(playerIndex.keySet());
+
             // El rival que sigue conectado gana; el que se fue pierde como desconectado
             String winnerName = "?";
             if (loserIdx != null) {
@@ -89,6 +107,13 @@ public class Main extends WebSocketServer {
             go.put("winner", winnerName);
             go.put("loser", loserName + " (Desconectado)");
             sendToAll(go.toString());
+        }
+
+        // Sin uno de los dos jugadores la partida ya no puede continuar: cancelar el
+        // bucle de juego para que no se reanude con el estado muerto al entrar un nuevo cliente.
+        if (gameLoopTask != null) {
+            gameLoopTask.cancel(false);
+            gameLoopTask = null;
         }
     }
 
@@ -115,8 +140,12 @@ public class Main extends WebSocketServer {
                     // Notificar a ambos clientes quién es quién
                     broadcastWaiting();
 
-                    // Si ya hay 2 jugadores conectados y nombrados, iniciar cuenta atrás
-                    if (playerNames.size() >= 2 && !gameRunning) {
+                    // Si ya hay 2 jugadores conectados y nombrados, no hay partida en curso
+                    // y NINGUNO está todavía en la pantalla de resultado, iniciar cuenta atrás.
+                    // Sin el guard, la entrada de un cliente nuevo reanudaría la partida
+                    // anterior; y sin el check de onResultScreen, se forzaría el inicio
+                    // aunque al jugador que espera le faltara pulsar "volver a jugar".
+                    if (playerNames.size() >= 2 && !gameRunning && onResultScreen.isEmpty()) {
                         startCountdown();
                     }
                     break;
@@ -141,14 +170,17 @@ public class Main extends WebSocketServer {
                 }
 
                 case Protocol.PLAY_AGAIN: {
-                    // Este jugador vuelve a la sala de espera
-                    waitingForRestart.add(conn);
+                    if (gameRunning) break; // sin partida terminada no hay "volver a jugar"
 
-                    if (waitingForRestart.size() >= 2) {
-                        // Los dos jugadores han vuelto: nueva cuenta atrás
+                    // Este jugador sale de la pantalla de resultado y vuelve a la sala de espera
+                    onResultScreen.remove(conn);
+
+                    // Reiniciar cuando todos los conectados están ya en la sala de espera
+                    // (si falta un segundo jugador, startCountdown no debe arrancar aún)
+                    if (onResultScreen.isEmpty() && playerIndex.size() >= 2) {
                         restartGame();
                     } else {
-                        // Solo uno espera: avisarle de que aún falta el rival
+                        // Aún falta alguien (o solo hay un jugador): avisarle de que espere
                         sendWaiting(conn);
                     }
                     break;
@@ -184,8 +216,9 @@ public class Main extends WebSocketServer {
         for (Map.Entry<WebSocket, Integer> e : playerIndex.entrySet()) {
             if (e.getValue() == index) {
                 // Tras acabar la partida, un jugador solo es visible en la sala de
-                // espera si también ha pulsado "volver a jugar"; si no, muestra "?".
-                if (!waitingForRestart.isEmpty() && !waitingForRestart.contains(e.getKey())) {
+                // espera si NO está en la pantalla de resultado (o sea, si ya pulsó
+                // "volver a jugar" o entró después de terminar la partida); si no, "?".
+                if (onResultScreen.contains(e.getKey())) {
                     return "?";
                 }
                 return playerNames.getOrDefault(e.getKey(), "?");
@@ -225,14 +258,14 @@ public class Main extends WebSocketServer {
         }
     }
 
-    /** Sobreescribe el nombre de un tanque en GameState (sin editar GameState: usamos reflexión vía campos públicos). */
+    /** Sobreescribe el nombre de un tanque en GameState con el nombre elegido por el cliente. */
     private void updateTankName(String playerKey, String name) {
-        // GameState no expide setter de nombres; mantenemos playerNames como fuente de verdad
-        // y usamos esos nombres en waiting/gameOver. Este método queda como punto de extensión.
+        game.setTankName(playerKey, name);
     }
 
     private void startCountdown() {
         gameRunning = true; // bloquea para no arrancar dos cuentas atrás
+        onResultScreen.clear(); // todos dejan la pantalla de resultado: empiezan a jugar
         for (int i = 5; i >= 0; i--) {
             final int value = i;
             scheduler.schedule(() -> {
@@ -246,6 +279,14 @@ public class Main extends WebSocketServer {
         scheduler.schedule(() -> {
             int scenario = 1 + (int)(Math.random() * 3);
             game.startGame(scenario);
+            // startGame crea los tanques con nombres por defecto ("Jugador 1/2"):
+            // sustituirlos por los nombres reales que cada cliente eligió con setName.
+            for (Map.Entry<WebSocket, Integer> e : playerIndex.entrySet()) {
+                String name = playerNames.get(e.getKey());
+                if (name != null) {
+                    game.setTankName(e.getValue() == 0 ? "player0" : "player1", name);
+                }
+            }
             lastRunNanos = System.nanoTime();
             startGameLoop();
         }, 6, TimeUnit.SECONDS);
@@ -284,6 +325,9 @@ public class Main extends WebSocketServer {
                 go.put("winner", nameByIndex(winnerIndex));
                 go.put("loser", nameByIndex(loserIndex));
                 sendToAll(go.toString());
+                // A partir de ahora ambos están en la pantalla de resultado: sus nombres
+                // solo volverán a ser visibles cuando pulsen "volver a jugar".
+                onResultScreen.addAll(playerIndex.keySet());
                 gameRunning = false;
             }
         }, 0, periodMs, TimeUnit.MILLISECONDS);
@@ -291,7 +335,7 @@ public class Main extends WebSocketServer {
 
     private void restartGame() {
         gameRunning = false;
-        waitingForRestart.clear();
+        onResultScreen.clear();
         // Nuevo estado de partida (limpia tanques, balas, explosiones, teclas)
         game = new GameState();
         lastRunNanos = System.nanoTime();
