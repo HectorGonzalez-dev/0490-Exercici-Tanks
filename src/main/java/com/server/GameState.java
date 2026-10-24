@@ -103,12 +103,7 @@ public class GameState {
         if (!tank.alive) return;
 
         // Contar balas activas de este jugador
-        int activeBullets = 0;
-        for (ServerBullet b : bullets) {
-            if (b.owner.equals(player)) activeBullets++;
-        }
-
-        if (activeBullets >= GameConfig.MAX_BULLETS) return;
+        if (countActiveBullets(player) >= GameConfig.MAX_BULLETS) return;
 
         // Apuntar hacia el ratón antes de disparar
         double[] mouse = mousePositions.getOrDefault(player,
@@ -185,19 +180,27 @@ public class GameState {
         // Paredes del escenario
         snapshot.walls.addAll(walls);
 
-        // Balas activas por jugador
+        // Balas activas por jugador, en el MISMO orden que snapshot.tanks
+        // (player0 -> índice 0, player1 -> índice 1). Antes se recorría tanks.values(),
+        // un HashMap cuyo orden de iteración es arbitrario, y el contador de balas
+        // podía llegar intercambiado entre los dos clientes.
         int[] activeBullets = new int[snapshot.tanks.size()];
         int idx = 0;
-        for (ServerTank tank : tanks.values()) {
-            int count = 0;
-            for (ServerBullet bullet : bullets) {
-                if (bullet.owner.equals(tank.id.equals("0") ? "player0" : "player1")) count++;
-            }
-            activeBullets[idx++] = count;
+        for (TankState tank : snapshot.tanks) {
+            activeBullets[idx++] = countActiveBullets(tank.id == 0 ? "player0" : "player1");
         }
         snapshot.activeBullets = activeBullets;
 
         return snapshot;
+    }
+
+    /** Número de balas activas en vuelo del jugador indicado ("player0"/"player1"). */
+    private int countActiveBullets(String player) {
+        int count = 0;
+        for (ServerBullet bullet : bullets) {
+            if (bullet.owner.equals(player)) count++;
+        }
+        return count;
     }
 
     private TankState toTankState(ServerTank tank) {
