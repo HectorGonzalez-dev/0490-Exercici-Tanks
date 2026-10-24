@@ -64,19 +64,30 @@ public class Main extends WebSocketServer {
 
     @Override
     public void onClose(WebSocket conn, int code, String reason, boolean remote) {
+        // Capturar los datos del que se va ANTES de borrarlos de los mapas
+        String loserName = playerNames.getOrDefault(conn, "Jugador");
+        Integer loserIdx = playerIndex.remove(conn);
         playerNames.remove(conn);
-        playerIndex.remove(conn);
         waitingForRestart.remove(conn);
         clients.remove(conn);
         System.out.println("Cliente desconectado: " + conn.getRemoteSocketAddress());
 
         if (gameRunning) {
             gameRunning = false;
-            // Notificar al cliente restante que el rival se fue (opcional)
+            // El rival que sigue conectado gana; el que se fue pierde como desconectado
+            String winnerName = "?";
+            if (loserIdx != null) {
+                for (Map.Entry<WebSocket, Integer> e : playerIndex.entrySet()) {
+                    if (!e.getValue().equals(loserIdx)) {
+                        winnerName = playerNames.getOrDefault(e.getKey(), "Jugador");
+                        break;
+                    }
+                }
+            }
             JSONObject go = new JSONObject();
             go.put("type", Protocol.GAME_OVER);
-            go.put("winner", "Rival desconectado");
-            go.put("loser", "Desconocido");
+            go.put("winner", winnerName);
+            go.put("loser", loserName + " (Desconectado)");
             sendToAll(go.toString());
         }
     }
