@@ -238,10 +238,10 @@ public class Main extends WebSocketServer {
                 sendSafe(conn, snap.toMessage().toString());
             }
 
-            // Comprobar fin de partida
-            String winnerTankName = game.checkGameOver();
-            if (winnerTankName != null) {
-                int winnerIndex = winnerTankName.equals("Jugador 1") ? 0 : 1;
+            // Comprobar fin de partida (un jugador se quedó sin vidas)
+            String winnerPlayerKey = game.checkGameOver();
+            if (winnerPlayerKey != null) {
+                int winnerIndex = "player0".equals(winnerPlayerKey) ? 0 : 1;
                 int loserIndex = 1 - winnerIndex;
                 JSONObject go = new JSONObject();
                 go.put("type", Protocol.GAME_OVER);

@@ -36,6 +36,12 @@ public class GameState {
 
     private long lastRunNanos = 0;
 
+    // Entre rondas: un tanque murió pero su jugador aún le quedan vidas.
+    // Se espera este retraso antes de reappear ambos tanques.
+    private static final double ROUND_RESET_DELAY_SECONDS = 2.0;
+    private boolean roundResetting = false;
+    private long roundResetStartNanos = 0;
+
     public void startGame(int scenario) {
         // 1. Cargar paredes del escenario
         walls.clear();
@@ -116,6 +122,19 @@ public class GameState {
     public void update(double dt) {
         if (dt <= 0) return;
 
+        // Si estamos entre rondas (un tanque murió pero aún le quedan vidas),
+        // esperamos el retraso y reaparecemos ambos tanques conservando sus vidas.
+        if (roundResetting) {
+            updateExplosions(dt);
+            long now = System.nanoTime();
+            double elapsed = (now - roundResetStartNanos) / 1_000_000_000.0;
+            if (elapsed >= ROUND_RESET_DELAY_SECONDS) {
+                respawnRound();
+                roundResetting = false;
+            }
+            return;
+        }
+
         double stepDt = dt / GameConfig.PHYSICS_PRECISION;
         for (int step = 0; step < GameConfig.PHYSICS_PRECISION; step++) {
             updateTanks(stepDt);
@@ -193,17 +212,60 @@ public class GameState {
             tank.alive);
     }
 
+    /**
+     * Comprueba si la partida ha terminado porque un jugador se quedó sin vidas.
+     *
+     * @return clave del jugador ganador ("player0" o "player1"), o null si la partida continúa
+     */
     public String checkGameOver() {
-        List<String> alivePlayers = new ArrayList<>();
-        for (ServerTank tank : tanks.values()) {
-            if (tank.alive) alivePlayers.add(tank.name);
-        }
+        ServerTank tank0 = tanks.get("player0");
+        ServerTank tank1 = tanks.get("player1");
 
-        if (alivePlayers.size() <= 1) {
-            if (alivePlayers.isEmpty()) return null; // Ambos murieron
-            return alivePlayers.get(0); // El único sobreviviente es el ganador
-        }
+        boolean sinVidas0 = (tank0 != null && tank0.lives <= 0);
+        boolean sinVidas1 = (tank1 != null && tank1.lives <= 0);
+
+        if (sinVidas0 && sinVidas1) return null; // Ambos sin vidas (empate)
+        if (sinVidas0) return "player1";         // Gana el jugador 2
+        if (sinVidas1) return "player0";         // Gana el jugador 1
         return null;
+    }
+
+    /** Marca que se debe reiniciar la ronda tras un breve retraso. */
+    private void startRoundReset() {
+        roundResetting = true;
+        roundResetStartNanos = System.nanoTime();
+    }
+
+    /**
+     * Vuelve a colocar ambos tanques en sus posiciones iniciales, conservando las vidas
+     * restantes de cada jugador. Limpia balas, explosiones y teclas pulsadas.
+     */
+    private void respawnRound() {
+        ServerTank t0 = tanks.get("player0");
+        ServerTank t1 = tanks.get("player1");
+        int lives0 = (t0 != null) ? t0.lives : GameConfig.INITIAL_LIVES;
+        int lives1 = (t1 != null) ? t1.lives : GameConfig.INITIAL_LIVES;
+
+        tanks.clear();
+        tanks.put("player0", new ServerTank(
+            "0", "Jugador 1", "DODGERBLUE",
+            90, 250, 0, 0,
+            lives0, true));
+        tanks.put("player1", new ServerTank(
+            "1", "Jugador 2", "DARKGOLDENROD",
+            710, 250, 180, 180,
+            lives1, true));
+
+        bullets.clear();
+        explosions.clear();
+        pressedKeys.clear();
+        mousePositions.clear();
+        pressedKeys.put("player0", new HashSet<>());
+        pressedKeys.put("player1", new HashSet<>());
+        mousePositions.put("player0", new double[]{710, 250});
+        mousePositions.put("player1", new double[]{90, 250});
+
+        lastRunNanos = System.nanoTime();
     }
 
     private void updateTanks(double dt) {
@@ -297,9 +359,13 @@ public class GameState {
                     new Point2DServer(bullet.x, bullet.y), ServerBullet.RADIUS,
                     new Point2DServer(target.x, target.y), ServerTank.RADIUS)) {
 
-                    target.destroy();
+                    boolean permanentlyDead = target.loseLife();
                     bulletsToRemove.add(bullet);
                     addExplosion(target.x, target.y, 60); // Explosión grande al destruir tanque
+                    if (!permanentlyDead) {
+                        // Perdió una vida pero aún le quedan: iniciar una nueva ronda tras un retraso
+                        startRoundReset();
+                    }
                     break;
                 }
             }
