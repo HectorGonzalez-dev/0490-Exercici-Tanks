@@ -140,10 +140,12 @@ public class Main extends WebSocketServer {
                     // Notificar a ambos clientes quién es quién
                     broadcastWaiting();
 
-                    // Si ya hay 2 jugadores conectados y nombrados (y no hay partida en curso),
-                    // iniciar cuenta atrás. Sin el guard, un jugador que espere en la sala
-                    // vería reanudarse la partida anterior al entrar un cliente nuevo.
-                    if (playerNames.size() >= 2 && !gameRunning) {
+                    // Si ya hay 2 jugadores conectados y nombrados, no hay partida en curso
+                    // y NINGUNO está todavía en la pantalla de resultado, iniciar cuenta atrás.
+                    // Sin el guard, la entrada de un cliente nuevo reanudaría la partida
+                    // anterior; y sin el check de onResultScreen, se forzaría el inicio
+                    // aunque al jugador que espera le faltara pulsar "volver a jugar".
+                    if (playerNames.size() >= 2 && !gameRunning && onResultScreen.isEmpty()) {
                         startCountdown();
                     }
                     break;
