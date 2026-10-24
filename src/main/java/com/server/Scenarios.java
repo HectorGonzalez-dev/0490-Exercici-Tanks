@@ -70,11 +70,11 @@ public final class Scenarios {
      * Cuatro obstáculos simétricos al centro, espacios amplios para moverse.
      */
     private static void addArenaObstacles(List<WallState> walls) {
-        double w = 60, h = 80;
-        walls.add(new WallState(300, 100, w, h, OBSTACLE_COLOR));   // arriba-izquierda
-        walls.add(new WallState(440, 100, w, h, OBSTACLE_COLOR));   // arriba-derecha
-        walls.add(new WallState(300, 320, w, h, OBSTACLE_COLOR));   // abajo-izquierda
-        walls.add(new WallState(440, 320, w, h, OBSTACLE_COLOR));   // abajo-derecha
+        double w = 40, h = 80;
+        walls.add(new WallState(280, 100, w, h, OBSTACLE_COLOR));   // arriba-izquierda
+        walls.add(new WallState(480, 100, w, h, OBSTACLE_COLOR));   // arriba-derecha
+        walls.add(new WallState(280, 320, w, h, OBSTACLE_COLOR));   // abajo-izquierda
+        walls.add(new WallState(480, 320, w, h, OBSTACLE_COLOR));   // abajo-derecha
     }
 
     /**
@@ -83,11 +83,11 @@ public final class Scenarios {
      */
     private static void addCorridorsObstacles(List<WallState> walls) {
         // Pared vertical izquierda
-        walls.add(new WallState(180, 60, 20, 380, OBSTACLE_COLOR));
+        walls.add(new WallState(130, 50, 20, 360, OBSTACLE_COLOR));
         // Pared vertical derecha
-        walls.add(new WallState(600, 60, 20, 380, OBSTACLE_COLOR));
+        walls.add(new WallState(650, 50, 20, 360, OBSTACLE_COLOR));
         // Pared horizontal central
-        walls.add(new WallState(220, 240, 360, 20, OBSTACLE_COLOR));
+        walls.add(new WallState(230, 240, 340, 20, OBSTACLE_COLOR));
     }
 
     /**
