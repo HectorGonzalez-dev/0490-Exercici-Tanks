@@ -31,5 +31,16 @@ for module in base controls fxml graphics; do
     fxPath="${fxPath:+$fxPath:}$jar"
 done
 
+# afegir dependencies extres (websocket, json, slf4j) al classpath
+extraCp="target/classes"
+for jar in "$HOME"/.m2/repository/org/java-websocket/Java-WebSocket/1.5.3/Java-WebSocket-1.5.3.jar \
+           "$HOME"/.m2/repository/org/json/json/20240303/json-20240303.jar \
+           "$HOME"/.m2/repository/org/slf4j/slf4j-api/2.0.3/slf4j-api-2.0.3.jar \
+           "$HOME"/.m2/repository/org/slf4j/slf4j-simple/2.0.3/slf4j-simple-2.0.3.jar; do
+    if [[ -f "$jar" ]]; then
+        extraCp="${extraCp}:$jar"
+    fi
+done
+
 exec java --module-path "$fxPath" --add-modules javafx.controls,javafx.fxml \
-    -cp target/classes "$mainClass"
+    -cp "$extraCp" "$mainClass"
