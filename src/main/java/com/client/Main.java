@@ -16,7 +16,6 @@ import com.shared.Protocol;
 public class Main extends Application {
 
     public static UtilsWS wsClient;
-    public static String clientName = "";
 
     public static CtrlConfig ctrlConfig;
     public static CtrlWait ctrlWait;
@@ -112,9 +111,6 @@ public class Main extends Application {
 
             // El servidor ens diu que estem esperant un contrincant
             case Protocol.WAITING: {
-                // Guardar el nostre nom assignat pel servidor
-                clientName = msgObj.optString("clientName", "");
-
                 // Tornar a mostrar el títol d'espera (pot haver quedat "GO!" del compte enrere anterior)
                 ctrlWait.txtTitle.setText("Esperant jugadors ...");
 

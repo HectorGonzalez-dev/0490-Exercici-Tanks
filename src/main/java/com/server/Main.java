@@ -18,6 +18,7 @@ import org.java_websocket.server.WebSocketServer;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import com.shared.GameConfig;
 import com.shared.GameSnapshot;
 import com.shared.Protocol;
 
@@ -25,7 +26,6 @@ public class Main extends WebSocketServer {
 
     public static final int DEFAULT_PORT = 3000;
 
-    private final ClientRegistry clients;
     private GameState game;
     private final ScheduledExecutorService scheduler;
 
@@ -52,15 +52,12 @@ public class Main extends WebSocketServer {
 
     public Main(InetSocketAddress address) {
         super(address);
-        this.clients = new ClientRegistry(List.of("Jugador 1", "Jugador 2"));
         this.game = new GameState();
         this.scheduler = Executors.newSingleThreadScheduledExecutor();
     }
 
     @Override
     public void onOpen(WebSocket conn, ClientHandshake handshake) {
-        clients.add(conn); // registra la conexión (el nombre de pool se ignora)
-
         // Reutilizar el índice libre (0 o 1): si un jugador se desconectó, su puesto
         // queda libre para el siguiente cliente. Si no, se asigna el primero vacío.
         Integer idx = null;
@@ -91,7 +88,6 @@ public class Main extends WebSocketServer {
         Integer loserIdx = playerIndex.remove(conn);
         playerNames.remove(conn);
         onResultScreen.remove(conn);
-        clients.remove(conn);
         System.out.println("Cliente desconectado: " + conn.getRemoteSocketAddress());
 
         if (gameRunning) {
@@ -261,7 +257,7 @@ public class Main extends WebSocketServer {
 
     /** Reenvía "waiting" a todos los clientes conectados (para que vean el nombre del rival). */
     private void broadcastWaiting() {
-        for (WebSocket conn : clients.snapshot().keySet()) {
+        for (WebSocket conn : playerIndex.keySet()) {
             sendWaiting(conn);
         }
     }
@@ -275,7 +271,7 @@ public class Main extends WebSocketServer {
 
     /** Envía un texto a todos los clientes conectados. */
     private void sendToAll(String text) {
-        for (WebSocket conn : clients.snapshot().keySet()) {
+        for (WebSocket conn : playerIndex.keySet()) {
             sendSafe(conn, text);
         }
     }
@@ -302,7 +298,7 @@ public class Main extends WebSocketServer {
         // Al acabar la cuenta atrás, iniciar partida y bucle
         countdownTasks.add(scheduler.schedule(() -> {
             if (!gameRunning) return; // sin partida en curso: no iniciar sobre un estado muerto
-            int scenario = 1 + (int)(Math.random() * 3);
+            int scenario = 1 + (int)(Math.random() * GameConfig.NUM_SCENARIOS);
             game.startGame(scenario);
             // startGame crea los tanques con nombres por defecto ("Jugador 1/2"):
             // sustituirlos por los nombres reales que cada cliente eligió con setName.
