@@ -185,9 +185,10 @@ public class CtrlPlay implements Initializable {
             drawExplosion(gc, explosion);
         }
 
-        // 6. dibujar la mira del raton
+        // 6. dibujar la guia de puntos y la mira del raton
         TankState myTank = currentState.getMyTank();
         if (myTank != null && myTank.alive) {
+            drawGuide(gc, myTank);
             drawCrosshair(gc, myTank);
         }
 
@@ -249,6 +250,47 @@ public class CtrlPlay implements Initializable {
         gc.fillOval(x, y, currentRadius * 2, currentRadius * 2);
         gc.setStroke(Color.ORANGERED);
         gc.strokeOval(x, y, currentRadius * 2, currentRadius * 2);
+        gc.restore();
+    }
+
+    // dibuja la linea de puntos desde el tanque hasta el raton
+    // se para si un punto toca una pared
+    private void drawGuide(GraphicsContext gc, TankState myTank) {
+        double startX = myTank.x;
+        double startY = myTank.y;
+
+        // calcular el angulo desde el tanque hasta el raton
+        double dx = mouseX - startX;
+        double dy = mouseY - startY;
+        double angle = Math.toDegrees(Math.atan2(dy, dx));
+        double distance = Math.sqrt(dx * dx + dy * dy);
+
+        // convertir el angulo a radianes para calcular las posiciones de los puntos
+        double rad = Math.toRadians(angle);
+        double dotRadius = 3;
+
+        gc.save();
+        gc.setFill(Color.web(myTank.color));
+
+        // dibujar un punto cada 18 pixeles, empezando a 44px del centro del tanque
+        for (double d = 44; d < distance; d += 18) {
+            double dotX = startX + Math.cos(rad) * d;
+            double dotY = startY + Math.sin(rad) * d;
+
+            // si el punto toca una pared, dejamos de dibujar
+            boolean blocked = false;
+            for (WallState wall : currentState.walls) {
+                if (dotX + dotRadius > wall.x && dotX - dotRadius < wall.x + wall.width &&
+                    dotY + dotRadius > wall.y && dotY - dotRadius < wall.y + wall.height) {
+                    blocked = true;
+                    break;
+                }
+            }
+            if (blocked) break;
+
+            gc.fillOval(dotX - dotRadius, dotY - dotRadius, dotRadius * 2, dotRadius * 2);
+        }
+
         gc.restore();
     }
 
