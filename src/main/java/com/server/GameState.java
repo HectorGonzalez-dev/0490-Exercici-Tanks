@@ -103,12 +103,7 @@ public class GameState {
         if (!tank.alive) return;
 
         // Contar balas activas de este jugador
-        int activeBullets = 0;
-        for (ServerBullet b : bullets) {
-            if (b.owner.equals(player)) activeBullets++;
-        }
-
-        if (activeBullets >= GameConfig.MAX_BULLETS) return;
+        if (countActiveBullets(player) >= GameConfig.MAX_BULLETS) return;
 
         // Apuntar hacia el ratón antes de disparar
         double[] mouse = mousePositions.getOrDefault(player,
@@ -185,19 +180,35 @@ public class GameState {
         // Paredes del escenario
         snapshot.walls.addAll(walls);
 
-        // Balas activas por jugador
+        // Balas activas por jugador, en el MISMO orden que snapshot.tanks
+        // (player0 -> índice 0, player1 -> índice 1). Antes se recorría tanks.values(),
+        // un HashMap cuyo orden de iteración es arbitrario, y el contador de balas
+        // podía llegar intercambiado entre los dos clientes.
         int[] activeBullets = new int[snapshot.tanks.size()];
         int idx = 0;
-        for (ServerTank tank : tanks.values()) {
-            int count = 0;
-            for (ServerBullet bullet : bullets) {
-                if (bullet.owner.equals(tank.id.equals("0") ? "player0" : "player1")) count++;
-            }
-            activeBullets[idx++] = count;
+        for (TankState tank : snapshot.tanks) {
+            activeBullets[idx++] = countActiveBullets(tank.id == 0 ? "player0" : "player1");
         }
         snapshot.activeBullets = activeBullets;
 
         return snapshot;
+    }
+
+    /** Número de balas activas en vuelo del jugador indicado ("player0"/"player1"). */
+    private int countActiveBullets(String player) {
+        int count = 0;
+        for (ServerBullet bullet : bullets) {
+            if (bullet.owner.equals(player)) count++;
+        }
+        return count;
+    }
+
+    /** Cambia el nombre mostrado del tanque del jugador indicado ("player0"/"player1"). */
+    public void setTankName(String playerKey, String name) {
+        ServerTank tank = tanks.get(playerKey);
+        if (tank != null && name != null && !name.isBlank()) {
+            tank.name = name;
+        }
     }
 
     private TankState toTankState(ServerTank tank) {
@@ -245,14 +256,18 @@ public class GameState {
         ServerTank t1 = tanks.get("player1");
         int lives0 = (t0 != null) ? t0.lives : GameConfig.INITIAL_LIVES;
         int lives1 = (t1 != null) ? t1.lives : GameConfig.INITIAL_LIVES;
+        // Conservar los nombres elegidos por cada jugador (si no, la pantalla de
+        // juego volvería a mostrar los nombres por defecto tras cada ronda).
+        String name0 = (t0 != null) ? t0.name : "Jugador 1";
+        String name1 = (t1 != null) ? t1.name : "Jugador 2";
 
         tanks.clear();
         tanks.put("player0", new ServerTank(
-            "0", "Jugador 1", "DODGERBLUE",
+            "0", name0, "DODGERBLUE",
             90, 250, 0, 0,
             lives0, true));
         tanks.put("player1", new ServerTank(
-            "1", "Jugador 2", "DARKGOLDENROD",
+            "1", name1, "DARKGOLDENROD",
             710, 250, 180, 180,
             lives1, true));
 

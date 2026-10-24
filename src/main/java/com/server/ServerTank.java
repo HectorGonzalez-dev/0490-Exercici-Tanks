@@ -7,7 +7,7 @@ public class ServerTank {
     public static final double RADIUS = GameConfig.TANK_RADIUS;
 
     public final String id;      // "0" o "1" — identidad estable del jugador
-    public final String name;
+    public String name;          // nombre del jugador (editable: llega por setName)
     public final String color;
 
     public double x;
